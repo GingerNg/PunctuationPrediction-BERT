@@ -1,7 +1,7 @@
 import tensorflow as tf
 import os
-from data.prepro_peopledaily import process_data
-from utils import batchnize_dataset
+from data.prepro_peopledaily import process_data, split_dataset
+# from utils import batchnize_dataset
 import os
 os.environ["CUDA_VISIBLE_DEVICES"] = "2"
 # dataset parameters
@@ -10,7 +10,8 @@ tf.flags.DEFINE_string("raw_path", "data/raw/LREC", "path to raw dataset")
 tf.flags.DEFINE_string("save_path", "data/dataset/lrec", "path to save dataset")
 tf.flags.DEFINE_string("glove_name", "840B", "glove embedding name")
 # glove embedding path
-glove_path = '/data/dh/glove/glove.840B.300d.txt'
+# glove_path = '/data/dh/glove/glove.840B.300d.txt'
+glove_path = './data/glove/glove.840B.300d.txt'
 #glove_path = os.path.join(os.path.expanduser(''), "utilities", "embeddings", "glove.{}.{}d.txt")
 tf.flags.DEFINE_string("glove_path", glove_path, "glove embedding path")
 tf.flags.DEFINE_integer("max_vocab_size", 50000, "maximal vocabulary size")
@@ -70,5 +71,11 @@ config = tf.flags.FLAGS.flag_values_dict()
 print("")
 #create dataset from raw data files
 
+# \data\raw\LREC
+# 将 2014_corpus.txt 分 成 了 2014_train.txt 2014_dev.txt 2014_test.txt 三 部 分
+# split_dataset()
+
+# \data\dataset\lrec
+# 对 2014_train.txt 2014_dev.txt 处理 形成 pd_train.json 和 pd_dev.json 文件
 process_data(config)
 

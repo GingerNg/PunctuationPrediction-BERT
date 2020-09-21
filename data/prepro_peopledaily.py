@@ -1,73 +1,83 @@
 # data preprocess ,generate train/dev/test dataset
-# import re
-# from tqdm import tqdm
-# import codecs
-# file = '/data/dh/neural_sequence_labeling-master/data/raw/LREC/2014_corpus.txt'
-# from sklearn.model_selection import train_test_split
-# with open(file,'r',encoding='utf-8') as fp:
-#     lines = fp.readlines()
-#     processed_lines = []
-#     for line in tqdm(lines):
-#
-#         line = re.sub(r'《','',line)
-#         line = re.sub(r'》', '', line)
-#         line = re.sub(r'“', '', line)
-#         line = re.sub(r'”', '', line)
-#         line = re.sub(r'——', '', line)
-#         line = re.sub(r'‘', '', line)
-#         line = re.sub(r'：', '', line)
-#         line = re.sub(r'’', '', line)
-#         line = re.sub(r'\[', '', line)
-#         line = re.sub(r']', '', line)
-#         line = re.sub(r'{', '', line)
-#         line = re.sub(r'}', '', line)
-#         line = re.sub(r'【', '', line)
-#         line = re.sub(r'】', '', line)
-#         line = re.sub(r'（', '', line)
-#         line = re.sub(r'）', '', line)
-#         line = re.sub(r'—', '', line)
-#         line = re.sub(r'…', '', line)
-#         line = re.sub(r'/[a-z]+\d* *[\[\]]?', "", line)
-#         line = ''.join(char+' ' for char in line)
-#         line = re.sub(r'、', " ,COMMA", line)
-#         line = re.sub(r'！', " .PERIOD ", line)
-#         line = re.sub(r'；', " ,COMMA ", line)
-#         line = re.sub(r'，', " ,COMMA ", line)
-#         line = re.sub(r'。', " .PERIOD ", line)
-#         line = re.sub(r'？', " ?QUESTIONMARK ", line)
-#         line = line.replace('\n', ' ')
-#         processed_lines.append(line)
-#     train_set ,dev_test_set = train_test_split(processed_lines,shuffle=True,test_size=0.2)
-#     print(len(dev_test_set))
-#     print(len(train_set))
-#     dev_set , test_set = train_test_split(dev_test_set,shuffle=True,test_size=0.5)
-#     print(len(dev_set))
-#     print(len(test_set))
-# def write_txt(filename, dataset):
-#     s = ''
-#     for line in  tqdm(dataset):
-#         s = s+line+ ' '
-#     with open(filename, mode="w+", encoding="utf-8") as f:
-#         f.write(s)
-# write_txt('/data/dh/neural_sequence_labeling-master/data/raw/LREC/2014_train.txt',train_set)
-# write_txt('/data/dh/neural_sequence_labeling-master/data/raw/LREC/2014_dev.txt',dev_set)
-# write_txt('/data/dh/neural_sequence_labeling-master/data/raw/LREC/2014_test.txt',test_set)
-# print('done')
-import os
-from tqdm import tqdm
-from collections import Counter
-import numpy as np
-import codecs
-import re
 from data.common import SPACE, UNK, PAD, NUM, END, write_json
+import numpy as np
+from collections import Counter
+import os
+from sklearn.model_selection import train_test_split
+import re
+from tqdm import tqdm
+import codecs
+from . import peopledaily_corpus
+
+
+
+def write_txt(filename, dataset):
+    s = ''
+    for line in tqdm(dataset):
+        s = s+line + ' '
+    with open(filename, mode="w+", encoding="utf-8") as f:
+        f.write(s)
+
+def split_dataset():
+    # file = '/data/dh/neural_sequence_labeling-master/data/raw/LREC/2014_corpus.txt'
+    file = peopledaily_corpus.raw_path
+    with open(file, 'r', encoding='utf-8') as fp:
+        lines = fp.readlines()
+        processed_lines = []
+        for line in tqdm(lines):
+
+            line = re.sub(r'《', '', line)
+            line = re.sub(r'》', '', line)
+            line = re.sub(r'“', '', line)
+            line = re.sub(r'”', '', line)
+            line = re.sub(r'——', '', line)
+            line = re.sub(r'‘', '', line)
+            line = re.sub(r'：', '', line)
+            line = re.sub(r'’', '', line)
+            line = re.sub(r'\[', '', line)
+            line = re.sub(r']', '', line)
+            line = re.sub(r'{', '', line)
+            line = re.sub(r'}', '', line)
+            line = re.sub(r'【', '', line)
+            line = re.sub(r'】', '', line)
+            line = re.sub(r'（', '', line)
+            line = re.sub(r'）', '', line)
+            line = re.sub(r'—', '', line)
+            line = re.sub(r'…', '', line)
+            line = re.sub(r'/[a-z]+\d* *[\[\]]?', "", line)
+            line = ''.join(char+' ' for char in line)
+            line = re.sub(r'、', " ,COMMA", line)
+            line = re.sub(r'！', " .PERIOD ", line)
+            line = re.sub(r'；', " ,COMMA ", line)
+            line = re.sub(r'，', " ,COMMA ", line)
+            line = re.sub(r'。', " .PERIOD ", line)
+            line = re.sub(r'？', " ?QUESTIONMARK ", line)
+            line = line.replace('\n', ' ')
+            processed_lines.append(line)
+        train_set, dev_test_set = train_test_split(
+            processed_lines, shuffle=True, test_size=0.2)
+        print(len(dev_test_set))
+        print(len(train_set))
+        dev_set, test_set = train_test_split(
+            dev_test_set, shuffle=True, test_size=0.5)
+        print(len(dev_set))
+        print(len(test_set))
+
+    write_txt(peopledaily_corpus.train_path, train_set)
+    write_txt(peopledaily_corpus.dev_path, dev_set)
+    write_txt(peopledaily_corpus.test_path, test_set)
+    print('done')
+
 
 # pre-set number of records in different glove embeddings
-glove_sizes = {'6B': int(4e5), '42B': int(1.9e6), '840B': int(2.2e6), '2B': int(1.2e6)}
+glove_sizes = {'6B': int(4e5), '42B': int(
+    1.9e6), '840B': int(2.2e6), '2B': int(1.2e6)}
 
 # Comma, period & question mark only:
 PUNCTUATION_VOCABULARY = [SPACE, ",COMMA", ".PERIOD", "?QUESTIONMARK"]
 #PUNCTUATION_VOCABULARY = [SPACE, ",COMMA"]
-PUNCTUATION_MAPPING = {"!EXCLAMATIONMARK": ".PERIOD", ":COLON": ",COMMA", ";SEMICOLON": ".PERIOD", "-DASH": ",COMMA"}
+PUNCTUATION_MAPPING = {"!EXCLAMATIONMARK": ".PERIOD",
+                       ":COLON": ",COMMA", ";SEMICOLON": ".PERIOD", "-DASH": ",COMMA"}
 
 EOS_TOKENS = {".PERIOD", "?QUESTIONMARK", "!EXCLAMATIONMARK"}
 # punctuations that are not included in vocabulary nor mapping, must be added to CRAP_TOKENS
@@ -98,7 +108,8 @@ def build_vocab_list(data_files, min_word_count, min_char_count, max_vocab_size)
                         char_counter[char] += 1
     word_vocab = [word for word, count in word_counter.most_common() if count >= min_word_count and word != UNK and
                   word != NUM][:max_vocab_size]
-    char_vocab = [char for char, count in char_counter.most_common() if count >= min_char_count and char != UNK]
+    char_vocab = [char for char, count in char_counter.most_common(
+    ) if count >= min_char_count and char != UNK]
     return word_vocab, char_vocab
 
 
@@ -161,7 +172,8 @@ def build_dataset(data_files, word_dict, char_dict, punct_dict, max_sequence_len
     """
     dataset = []
     current_words, current_chars, current_punctuations = [], [], []
-    last_eos_idx = 0  # if it's still 0 when MAX_SEQUENCE_LEN is reached, then the sentence is too long and skipped.
+    # if it's still 0 when MAX_SEQUENCE_LEN is reached, then the sentence is too long and skipped.
+    last_eos_idx = 0
     last_token_was_punctuation = True  # skip first token if it's punctuation
     # if a sentence does not fit into subsequence, then we need to skip tokens until we find a new sentence
     skip_until_eos = False
@@ -184,7 +196,8 @@ def build_dataset(data_files, word_dict, char_dict, punct_dict, max_sequence_len
                         if last_token_was_punctuation:
                             continue
                         if token in EOS_TOKENS:
-                            last_eos_idx = len(current_punctuations)  # no -1, because the token is not added yet
+                            # no -1, because the token is not added yet
+                            last_eos_idx = len(current_punctuations)
                         punctuation = punct_dict[token]
                         current_punctuations.append(token)
                         last_token_was_punctuation = True
@@ -201,9 +214,11 @@ def build_dataset(data_files, word_dict, char_dict, punct_dict, max_sequence_len
                         current_words.append(token)
                         current_chars.append(chars)
                         last_token_was_punctuation = False
-                    if len(current_words) == max_sequence_len:  # this also means, that last token was a word
+                    # this also means, that last token was a word
+                    if len(current_words) == max_sequence_len:
                         assert len(current_words) == len(current_punctuations) + 1, \
-                            "#words: %d; #punctuations: %d" % (len(current_words), len(current_punctuations))
+                            "#words: %d; #punctuations: %d" % (
+                                len(current_words), len(current_punctuations))
                         # Sentence did not fit into subsequence - skip it
                         if last_eos_idx == 0:
                             skip_until_eos = True
@@ -213,7 +228,7 @@ def build_dataset(data_files, word_dict, char_dict, punct_dict, max_sequence_len
                             # next sequence starts with a new sentence, so is preceded by eos which is punctuation
                             last_token_was_punctuation = True
                         else:
-                            subsequence = {"words": current_words[:-1] ,"chars": current_chars[:-1],
+                            subsequence = {"words": current_words[:-1], "chars": current_chars[:-1],
                                            "tags": current_punctuations}
                             dataset.append(subsequence)
                             # Carry unfinished sentence to next subsequence
@@ -245,15 +260,20 @@ def process_data(config):
         word_dict, char_dict = build_vocabulary(word_vocab, char_vocab)
         tmp_word_dict = word_dict.copy()
         del tmp_word_dict[UNK], tmp_word_dict[NUM], tmp_word_dict[END]
-        vectors = filter_glove_emb(tmp_word_dict, glove_path, config["glove_name"], config["emb_dim"])
+        vectors = filter_glove_emb(
+            tmp_word_dict, glove_path, config["glove_name"], config["emb_dim"])
         np.savez_compressed(config["pretrained_emb"], embeddings=vectors)
     # create indices dataset
-    punct_dict = dict([(punct, idx) for idx, punct in enumerate(PUNCTUATION_VOCABULARY)])
-    train_set = build_dataset([train_file], word_dict, char_dict, punct_dict, config["max_sequence_len"])
-    dev_set = build_dataset([dev_file], word_dict, char_dict, punct_dict, config["max_sequence_len"])
+    punct_dict = dict([(punct, idx)
+                       for idx, punct in enumerate(PUNCTUATION_VOCABULARY)])
+    train_set = build_dataset(
+        [train_file], word_dict, char_dict, punct_dict, config["max_sequence_len"])
+    dev_set = build_dataset([dev_file], word_dict,
+                            char_dict, punct_dict, config["max_sequence_len"])
     #ref_set = build_dataset([ref_file], word_dict, char_dict, punct_dict, config["max_sequence_len"])
 
-    vocab = {"word_dict": word_dict, "char_dict": char_dict, "tag_dict": punct_dict}
+    vocab = {"word_dict": word_dict,
+             "char_dict": char_dict, "tag_dict": punct_dict}
     # write to file
     #write_json(config["vocab"], vocab)
     write_json(config["train_set"], train_set)

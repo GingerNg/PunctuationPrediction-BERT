@@ -1,0 +1,6 @@
+*.cpython-36.pyc
+data/raw/*
+data/dataset/*
+data/bert/*
+data/glove/*
+nohup.out
