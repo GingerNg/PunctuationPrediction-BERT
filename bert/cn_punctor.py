@@ -77,9 +77,12 @@ flags.DEFINE_integer(
     "than this will be padded.")
 flags.DEFINE_boolean(
     'clean', False, 'remove the files which created by last training')
-flags.DEFINE_bool("do_train", False, "Whether to run training.")
-flags.DEFINE_bool("use_tpu", False, "Whether to use TPU or GPU/CPU.")
-flags.DEFINE_bool("do_eval", True, "Whether to run eval on the dev set.")
+
+# flags不能设置多次
+# flags.DEFINE_bool("do_train", False, "Whether to run training.")
+# flags.DEFINE_bool("use_tpu", False, "Whether to use TPU or GPU/CPU.")
+# flags.DEFINE_bool("do_eval", True, "Whether to run eval on the dev set.")
+
 flags.DEFINE_bool("do_predict", True, "Whether to run eval on the dev set.")
 
 flags.DEFINE_integer("train_batch_size", 4, "Total batch size for training.")
@@ -218,7 +221,14 @@ class PunctorProcessor(DataProcessor):
         )
 
     def get_test_examples(self, data_dir):
+        """[summary]
 
+        Args:
+            data_dir ([type]): [description]
+
+        Returns:
+            [type]: [description]
+        """
         input_file = '/root/Projects/PunctuationPrediction-BERT/data/raw/LREC/2014_test.txt'
         index = 0
         lines = []
@@ -512,7 +522,7 @@ def filed_based_convert_examples_to_features(
         if ex_index % 10000 == 0:
             tf.logging.info("Writing example %d of %d" %
                             (ex_index, len(examples)))
-
+        # example ==> feature
         feature = convert_single_example(ex_index, example, label_list,
                                          max_seq_length, tokenizer, mode)
 
@@ -909,9 +919,9 @@ def main():
         'punctor': PunctorProcessor,
     }
 
-    if not FLAGS.do_train and not FLAGS.do_eval:
-        raise ValueError(
-            "At least one of `do_train` or `do_eval` must be True.")
+    # if not FLAGS.do_train and not FLAGS.do_eval:
+    #     raise ValueError(
+    #         "At least one of `do_train` or `do_eval` must be True.")
 
     bert_config = modeling.BertConfig.from_json_file(FLAGS.bert_config_file)
 
@@ -995,6 +1005,7 @@ def main():
         else:
             num_train_steps = int(data_config['num_train_steps'])
             num_warmup_steps = int(data_config['num_warmup_steps'])
+
     # 返回的model_dn 是一个函数，其定义了模型，训练，评测方法，并且使用钩子参数，加载了BERT模型的参数进行了自己模型的参数初始化过程
     # tf 新的架构方法，通过定义model_fn 函数，定义模型，然后通过EstimatorAPI进行模型的其他工作，Es就可以控制模型的训练，预测，评估工作等。
     model_fn = softmax_model_fn_builder(
@@ -1015,6 +1026,7 @@ def main():
         eval_batch_size=FLAGS.eval_batch_size,
         predict_batch_size=FLAGS.predict_batch_size)
 
+    # ---------------------------------------------------------------------
     if FLAGS.do_train:
         train_file = os.path.join(FLAGS.output_dir, "train.tf_record")
         filed_based_convert_examples_to_features(
@@ -1030,6 +1042,8 @@ def main():
             drop_remainder=True)
         estimator.train(input_fn=train_input_fn, max_steps=num_train_steps)
 
+    # ---------------------------------------------------------------------
+    print("--------------------------------------------------------------")
     if FLAGS.do_eval:
         if data_config.get('eval.tf_record_path', '') == '':
             eval_examples = processor.get_dev_examples(FLAGS.data_dir)
@@ -1068,6 +1082,7 @@ def main():
         with codecs.open(FLAGS.data_config_path, 'a', encoding='utf-8') as fd:
             json.dump(data_config, fd)
 
+    # ---------------------------------------------------------------------
     # Metric code
     # pred_result = estimator.predict(input_fn=eval_input_fn)
     # get_eval(pred_result, real_labels, label_list, FLAGS.max_seq_length)
