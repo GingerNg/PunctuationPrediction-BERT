@@ -82,8 +82,7 @@ flags.DEFINE_boolean(
 # flags.DEFINE_bool("do_train", False, "Whether to run training.")
 # flags.DEFINE_bool("use_tpu", False, "Whether to use TPU or GPU/CPU.")
 # flags.DEFINE_bool("do_eval", True, "Whether to run eval on the dev set.")
-
-flags.DEFINE_bool("do_predict", True, "Whether to run eval on the dev set.")
+# flags.DEFINE_bool("do_predict", True, "Whether to run eval on the dev set.")
 
 flags.DEFINE_integer("train_batch_size", 4, "Total batch size for training.")
 
@@ -229,7 +228,7 @@ class PunctorProcessor(DataProcessor):
         Returns:
             [type]: [description]
         """
-        input_file = '/root/Projects/PunctuationPrediction-BERT/data/raw/LREC/2014_test.txt'
+        input_file = '/root/Projects/PunctuationPrediction-BERT/data/raw/LREC/2014_test_mini.txt'
         index = 0
         lines = []
 
@@ -541,6 +540,7 @@ def filed_based_convert_examples_to_features(
         writer.write(tf_example.SerializeToString())
 
 
+# 数据的输入——input_fn 返回： features(feature,labels)
 def file_based_input_fn_builder(input_file, seq_length, is_training,
                                 drop_remainder):
     """Creates an `input_fn` closure to be passed to TPUEstimator."""
@@ -642,6 +642,7 @@ def create_model(bert_config, is_training, input_ids, input_mask,  # 这个是be
     return rst
 
 
+# 定义最后的网络结构 和 损失函数 以及 返回值
 def softmax_create_model(bert_config, is_training, input_ids, input_mask,
                          segment_ids, labels, num_labels, use_one_hot_embeddings):
     """
@@ -678,7 +679,7 @@ def softmax_create_model(bert_config, is_training, input_ids, input_mask,
 
     one_hot_labels = tf.one_hot(labels, depth=num_labels, dtype=tf.float32)
 
-    per_example_loss = -tf.reduce_sum(one_hot_labels * log_probs, axis=-1)
+    per_example_loss = -tf.reduce_sum(one_hot_labels * log_probs, axis=-1)  # loss 交叉熵损失函数
     loss = tf.reduce_mean(per_example_loss)
 
     return (loss, per_example_loss, logits, probabilities)
@@ -819,6 +820,7 @@ def softmax_model_fn_builder(bert_config, num_labels, init_checkpoint, learning_
             tf.logging.info("  name = %s, shape = %s" %
                             (name, features[name].shape))
 
+        # feature_columns
         input_ids = features["input_ids"]
         input_mask = features["input_mask"]
         segment_ids = features["segment_ids"]
@@ -1006,6 +1008,7 @@ def main():
             num_train_steps = int(data_config['num_train_steps'])
             num_warmup_steps = int(data_config['num_warmup_steps'])
 
+    # 建立Estimator
     # 返回的model_dn 是一个函数，其定义了模型，训练，评测方法，并且使用钩子参数，加载了BERT模型的参数进行了自己模型的参数初始化过程
     # tf 新的架构方法，通过定义model_fn 函数，定义模型，然后通过EstimatorAPI进行模型的其他工作，Es就可以控制模型的训练，预测，评估工作等。
     model_fn = softmax_model_fn_builder(
@@ -1042,7 +1045,6 @@ def main():
             drop_remainder=True)
         estimator.train(input_fn=train_input_fn, max_steps=num_train_steps)
 
-    # ---------------------------------------------------------------------
     print("--------------------------------------------------------------")
     if FLAGS.do_eval:
         if data_config.get('eval.tf_record_path', '') == '':
@@ -1188,6 +1190,63 @@ def main():
         out_str, f1, err, ser = compute_score(target_path, predict_path)
         tf.logging.info("\nEvaluate on {}:\n{}\n".format('asr', out_str))
 
+    if FLAGS.do_infer:
+        token_path = os.path.join(FLAGS.output_dir, "token_test.txt")
+        if os.path.exists(token_path):
+            os.remove(token_path)
+
+        with codecs.open(os.path.join(FLAGS.output_dir, 'label2id.pkl'), 'rb') as rf:
+            label2id = pickle.load(rf)
+            id2label = {value: key for key, value in label2id.items()}
+
+        predict_examples = processor.get_test_examples(FLAGS.test_data_dir)
+        predict_file = os.path.join(FLAGS.output_dir, "predict.tf_record")
+        filed_based_convert_examples_to_features(
+            predict_examples, label_list, FLAGS.max_seq_length, tokenizer, predict_file, mode="test")
+
+        tf.logging.info("***** Running prediction*****")
+        tf.logging.info("  Num examples = %d", len(predict_examples))
+        tf.logging.info("  Batch size = %d", FLAGS.predict_batch_size)
+        if FLAGS.use_tpu:
+            # Warning: According to tpu_estimator.py Prediction on TPU is an
+            # experimental feature and hence not supported here
+            raise ValueError("Prediction in TPU not supported")
+        predict_drop_remainder = True if FLAGS.use_tpu else False
+        predict_input_fn = file_based_input_fn_builder(
+            input_file=predict_file,
+            seq_length=FLAGS.max_seq_length,
+            is_training=False,
+            drop_remainder=predict_drop_remainder)
+
+        # predicted_result = estimator.evaluate(input_fn=predict_input_fn)
+        # output_eval_file = os.path.join(FLAGS.output_dir, "predicted_results.txt")
+        # with codecs.open(output_eval_file, "w", encoding='utf-8') as writer:
+        #     tf.logging.info("***** Predict results *****")
+        #     for key in sorted(predicted_result.keys()):
+        #         tf.logging.info("  %s = %s", key, str(predicted_result[key]))
+        #         writer.write("%s = %s\n" % (key, str(predicted_result[key])))
+
+        result = estimator.predict(input_fn=predict_input_fn)
+        # print(result)
+        for predict_line, prediction in zip(predict_examples, result):
+            prediction = np.argmax(prediction, axis=-1)
+            line = []
+            line_token = str(predict_line.text).split(' ')
+
+            if len(line_token) != len(prediction):
+                tf.logging.info(predict_line.text)
+                tf.logging.info(predict_line.label)
+            print(line_token)
+            print(prediction)
+            for word, label in zip(line_token, prediction):
+                curr_labels = id2label[label]
+                if curr_labels == "_SPACE":
+                    line.append(word)
+                else:
+                    line.append(word)
+                    line.append(curr_labels)
+            line = ' ' + ' '.join(line)
+            print(line)
 
 def compute_score(target_path, predicted_path):
     """Computes and prints the overall classification error and precision, recall, F-score over punctuations."""

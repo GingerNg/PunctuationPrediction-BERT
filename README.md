@@ -31,3 +31,8 @@ dataprocess_peopledaily
 process_data(config)
 
 ### 训练
+softmax_model_fn_builder
+    softmax_create_model
+
+
+https://zhuanlan.zhihu.com/p/76258948
