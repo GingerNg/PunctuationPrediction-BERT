@@ -219,6 +219,29 @@ class PunctorProcessor(DataProcessor):
             self._read_data(os.path.join(data_dir, "pd_dev.json")), "dev"
         )
 
+    def get_infer_examples(self, data_dir, input_file_path):
+        # input_file = '/root/Projects/PunctuationPrediction-BERT/data/raw/LREC/2014_infer.txt'
+        index = 0
+        lines = []
+
+        with codecs.open(input_file_path, 'r', encoding='utf-8') as f:
+            text = f.read().split()
+            # 挑选文字
+            text = [
+                w for w in text if w not in tag_dict and w not in PUNCTUATION_MAPPING]
+            while index+FLAGS.max_seq_length < len(text):
+
+                subseq = text[index: index + FLAGS.max_seq_length]  # list
+
+                w = ' '.join([word for word in subseq if len(word) > 0])
+                lines.append([w])  # str 每个字以空格分隔
+                index = index+FLAGS.max_seq_length
+            remain_seq = text[index:]  # 最后一行
+
+            w = ' '.join([word for word in remain_seq if len(word) > 0])
+            lines.append([w])
+            return self._create_example(lines, "test")
+
     def get_test_examples(self, data_dir):
         """[summary]
 
@@ -679,7 +702,8 @@ def softmax_create_model(bert_config, is_training, input_ids, input_mask,
 
     one_hot_labels = tf.one_hot(labels, depth=num_labels, dtype=tf.float32)
 
-    per_example_loss = -tf.reduce_sum(one_hot_labels * log_probs, axis=-1)  # loss 交叉熵损失函数
+    per_example_loss = - \
+        tf.reduce_sum(one_hot_labels * log_probs, axis=-1)  # loss 交叉熵损失函数
     loss = tf.reduce_mean(per_example_loss)
 
     return (loss, per_example_loss, logits, probabilities)
@@ -1190,63 +1214,8 @@ def main():
         out_str, f1, err, ser = compute_score(target_path, predict_path)
         tf.logging.info("\nEvaluate on {}:\n{}\n".format('asr', out_str))
 
-    if FLAGS.do_infer:
-        token_path = os.path.join(FLAGS.output_dir, "token_test.txt")
-        if os.path.exists(token_path):
-            os.remove(token_path)
 
-        with codecs.open(os.path.join(FLAGS.output_dir, 'label2id.pkl'), 'rb') as rf:
-            label2id = pickle.load(rf)
-            id2label = {value: key for key, value in label2id.items()}
 
-        predict_examples = processor.get_test_examples(FLAGS.test_data_dir)
-        predict_file = os.path.join(FLAGS.output_dir, "predict.tf_record")
-        filed_based_convert_examples_to_features(
-            predict_examples, label_list, FLAGS.max_seq_length, tokenizer, predict_file, mode="test")
-
-        tf.logging.info("***** Running prediction*****")
-        tf.logging.info("  Num examples = %d", len(predict_examples))
-        tf.logging.info("  Batch size = %d", FLAGS.predict_batch_size)
-        if FLAGS.use_tpu:
-            # Warning: According to tpu_estimator.py Prediction on TPU is an
-            # experimental feature and hence not supported here
-            raise ValueError("Prediction in TPU not supported")
-        predict_drop_remainder = True if FLAGS.use_tpu else False
-        predict_input_fn = file_based_input_fn_builder(
-            input_file=predict_file,
-            seq_length=FLAGS.max_seq_length,
-            is_training=False,
-            drop_remainder=predict_drop_remainder)
-
-        # predicted_result = estimator.evaluate(input_fn=predict_input_fn)
-        # output_eval_file = os.path.join(FLAGS.output_dir, "predicted_results.txt")
-        # with codecs.open(output_eval_file, "w", encoding='utf-8') as writer:
-        #     tf.logging.info("***** Predict results *****")
-        #     for key in sorted(predicted_result.keys()):
-        #         tf.logging.info("  %s = %s", key, str(predicted_result[key]))
-        #         writer.write("%s = %s\n" % (key, str(predicted_result[key])))
-
-        result = estimator.predict(input_fn=predict_input_fn)
-        # print(result)
-        for predict_line, prediction in zip(predict_examples, result):
-            prediction = np.argmax(prediction, axis=-1)
-            line = []
-            line_token = str(predict_line.text).split(' ')
-
-            if len(line_token) != len(prediction):
-                tf.logging.info(predict_line.text)
-                tf.logging.info(predict_line.label)
-            print(line_token)
-            print(prediction)
-            for word, label in zip(line_token, prediction):
-                curr_labels = id2label[label]
-                if curr_labels == "_SPACE":
-                    line.append(word)
-                else:
-                    line.append(word)
-                    line.append(curr_labels)
-            line = ' ' + ' '.join(line)
-            print(line)
 
 def compute_score(target_path, predicted_path):
     """Computes and prints the overall classification error and precision, recall, F-score over punctuations."""
