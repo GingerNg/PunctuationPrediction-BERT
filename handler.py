@@ -61,8 +61,8 @@ estimator = tf.contrib.tpu.TPUEstimator(
     predict_batch_size=FLAGS.predict_batch_size)
 
 
-def infer(input_file_path):
-    predict_examples = processor.get_infer_examples(FLAGS.test_data_dir, input_file_path)
+def infer(input_file_path=None, text=None):
+    predict_examples = processor.get_infer_examples(input_file_path, text)
 
     predict_file = os.path.join(FLAGS.output_dir, "infer.tf_record")
     filed_based_convert_examples_to_features(
@@ -106,8 +106,9 @@ def infer(input_file_path):
 
 if __name__ == "__main__":
 
-    infer('/root/Projects/PunctuationPrediction-BERT/data/raw/LREC/case.txt')
-    input_file_path = '/root/Projects/PunctuationPrediction-BERT/data/raw/LREC/case2.txt'
-    print("-----------------")
-    open(input_file_path, "w").write("我 是 谁")
-    infer(input_file_path)
+    # infer('/root/Projects/PunctuationPrediction-BERT/data/raw/LREC/case.txt')
+    infer(text="我是谁")
+    # input_file_path = '/root/Projects/PunctuationPrediction-BERT/data/raw/LREC/case2.txt'
+    # print("-----------------")
+    # open(input_file_path, "w").write("我 是 谁")
+    # infer(input_file_path)

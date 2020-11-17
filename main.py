@@ -15,7 +15,7 @@ async def sbd(sentence: str = Form(...),):
     """[]
 
     Args:
-        ppt_resource_file (UploadFile, optional): [description]. Defaults to File(...).
+        ppt_resource_file (UploadFile, optionaduikang l): [description]. Defaults to File(...).
         ppt_json (str, optional): [description]. Defaults to Form(...).
 
     Returns:
@@ -24,9 +24,7 @@ async def sbd(sentence: str = Form(...),):
     response = {"message": "", "result": ""}
     try:
         # 校验json
-        input_file_path = '/root/Projects/PunctuationPrediction-BERT/data/raw/LREC/case2.txt'
-        open(input_file_path, "w").write(" ".join(list(sentence)))
-        response["result"] = handler.infer(input_file_path)
+        response["result"] = handler.infer(text=sentence)
     except Exception as e:
         logging.error("sbd:{}".format(e.__repr__()))
         response["message"] = e.__repr__()

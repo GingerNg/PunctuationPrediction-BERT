@@ -93,7 +93,7 @@ flags.DEFINE_integer("predict_batch_size", 4, "Total batch size for predict.")
 flags.DEFINE_float("learning_rate", 5e-5,
                    "The initial learning rate for Adam.")
 
-flags.DEFINE_float("num_train_epochs", 1.0,
+flags.DEFINE_float("num_train_epochs", 100.0,
                    "Total number of training epochs to perform.")
 flags.DEFINE_float('droupout_rate', 0.5, 'Dropout rate')
 flags.DEFINE_float('clip', 5, 'Gradient clip')
@@ -219,13 +219,11 @@ class PunctorProcessor(DataProcessor):
             self._read_data(os.path.join(data_dir, "pd_dev.json")), "dev"
         )
 
-    def get_infer_examples(self, data_dir, input_file_path):
+    def get_infer_examples(self, input_file_path, text=None):
         # input_file = '/root/Projects/PunctuationPrediction-BERT/data/raw/LREC/2014_infer.txt'
-        index = 0
-        lines = []
-
-        with codecs.open(input_file_path, 'r', encoding='utf-8') as f:
-            text = f.read().split()
+        def _process(text):
+            index = 0
+            lines = []
             # 挑选文字
             text = [
                 w for w in text if w not in tag_dict and w not in PUNCTUATION_MAPPING]
@@ -241,6 +239,16 @@ class PunctorProcessor(DataProcessor):
             w = ' '.join([word for word in remain_seq if len(word) > 0])
             lines.append([w])
             return self._create_example(lines, "test")
+
+        if text is None:
+            with codecs.open(input_file_path, 'r', encoding='utf-8') as f:
+                text = f.read().split()
+                # 挑选文字
+                return _process(text)
+        else:
+            # text = text.split()
+            text = list(text)
+            return _process(text)
 
     def get_test_examples(self, data_dir):
         """[summary]
